@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema de Fichas Sociales</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0c2340">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Fichas Sociales">
+<style>
+  :root{
+    --azul-900:#0c2340; --azul-700:#14355c; --azul-500:#2a5c94; --azul-100:#e8eef5;
+    --papel:#faf8f4; --papel-borde:#dcd5c8;
+    --tinta:#22201c; --tinta-suave:#6b665c;
+    --ok:#2f6f4f; --ok-bg:#e6f2ea;
+    --alerta:#a13d2c; --alerta-bg:#faeae6;
+    --pendiente:#8a6412; --pendiente-bg:#faf1de;
+    --radio:6px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:Georgia, "Times New Roman", serif;
+    background:var(--papel); color:var(--tinta);
+  }
+  input,select,button,textarea{font-family:Arial,Helvetica,sans-serif;}
+  h1,h2,h3{font-family:Georgia,serif; font-weight:normal; margin:0 0 4px;}
+  .oculto{display:none !important;}
+
+  /* ---------- Login ---------- */
+  #splash{
+    position:fixed; inset:0; z-index:9999;
+    background:#0c2340 url("./splash.jpg") center center / 240px no-repeat;
+    display:flex; align-items:flex-end; justify-content:center;
+    padding-bottom:60px;
+    transition:opacity .5s ease;
+  }
+  #splash p{ color:#fff; opacity:.85; font-size:14px; letter-spacing:.02em; }
+  #splash.oculto{ opacity:0; pointer-events:none; }
+  #vista-login{
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    background:var(--azul-900);
+  }
+  .caja-login{
+    background:var(--papel); border:1px solid var(--papel-borde); border-radius:var(--radio);
+    padding:40px 36px; width:340px; box-shadow:0 8px 30px rgba(0,0,0,.25);
+  }
+  .caja-login h1{font-size:22px; color:var(--azul-900); margin-bottom:2px;}
+  .caja-login p.sub{font-family:Arial,sans-serif; font-size:13px; color:var(--tinta-suave); margin:0 0 22px;}
+  .campo{margin-bottom:14px;}
+  .campo label{display:block; font-family:Arial,sans-serif; font-size:12px; color:var(--tinta-suave); margin-bottom:4px;}
+  .campo input, .campo select, .campo textarea{
+    width:100%; padding:9px 10px; border:1px solid var(--papel-borde); border-radius:4px;
+    font-size:14px; background:#fff; color:var(--tinta);
+  }
+  .campo textarea{resize:vertical; min-height:60px;}
+  button.primario{
+    width:100%; padding:10px; background:var(--azul-900); color:#fff; border:none;
+    border-radius:4px; font-family:Arial,sans-serif; font-size:14px; cursor:pointer;
+  }
+  button.primario:hover{background:var(--azul-700);}
+  button.secundario{
+    padding:9px 16px; background:#fff; color:var(--azul-900); border:1px solid var(--azul-900);
+    border-radius:4px; font-family:Arial,sans-serif; font-size:13px; cursor:pointer;
+  }
+  button.chico{padding:5px 10px; font-size:12px;}
+  button.peligro{color:var(--alerta); border-color:var(--alerta);}
+  .error-login{color:var(--alerta); font-family:Arial,sans-serif; font-size:13px; margin-top:10px;}
+  .link-alternar{display:block; text-align:center; margin-top:16px; font-family:Arial,sans-serif; font-size:13px; color:var(--azul-700); cursor:pointer;}
+  .mensaje-ok{color:var(--ok); font-family:Arial,sans-serif; font-size:13px; margin-top:10px;}
+
+  /* ---------- App shell ---------- */
+  #vista-app{min-height:100vh; display:none;}
+  header.barra{
+    background:var(--azul-900); color:#fff; padding:14px 24px;
+    display:flex; align-items:center; justify-content:space-between;
+    font-family:Arial,sans-serif;
+  }
+  header.barra .marca{font-family:Georgia,serif; font-size:18px;}
+  header.barra .marca span{color:#cdd9e8; font-size:12px; display:block; font-family:Arial,sans-serif;}
+  header.barra .usuario{font-size:13px; text-align:right;}
+  header.barra .usuario button{
+    background:none; border:1px solid #6f88a6; color:#dbe4ef; padding:4px 10px;
+    border-radius:4px; font-size:12px; margin-left:10px; cursor:pointer;
+  }
+  nav.tabs{
+    background:var(--azul-700); display:flex; gap:2px; padding:0 20px; font-family:Arial,sans-serif;
+  }
+  nav.tabs button{
+    background:none; border:none; color:#cdd9e8; padding:12px 16px; font-size:13px; cursor:pointer;
+    border-bottom:3px solid transparent;
+  }
+  nav.tabs button.activo{color:#fff; border-bottom-color:#fff;}
+  main{padding:24px; max-width:1000px; margin:0 auto;}
+
+  .panel{background:#fff; border:1px solid var(--papel-borde); border-radius:var(--radio); padding:20px; margin-bottom:20px;}
+  .panel-cabecera{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .panel-cabecera h2{font-size:17px; color:var(--azul-900);}
+
+  table.registro{width:100%; border-collapse:collapse; font-family:Arial,sans-serif; font-size:13px;}
+  table.registro th{
+    text-align:left; padding:8px 10px; border-bottom:2px solid var(--azul-900);
+    color:var(--azul-900); font-weight:bold; font-size:12px; text-transform:none;
+  }
+  table.registro td{padding:9px 10px; border-bottom:1px solid var(--papel-borde);}
+  table.registro tr:hover td{background:var(--azul-100);}
+  table.registro tr{cursor:pointer;}
+
+  .fila-form{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;}
+  .fila-form .campo{flex:1; min-width:180px; margin-bottom:0;}
+
+  .pill{
+    display:inline-block; padding:2px 10px; border-radius:20px; font-size:11px; font-family:Arial,sans-serif;
+  }
+  .pill.pendiente{background:var(--pendiente-bg); color:var(--pendiente);}
+  .pill.en_curso{background:var(--azul-100); color:var(--azul-700);}
+  .pill.aprobado{background:var(--ok-bg); color:var(--ok);}
+  .pill.rechazado{background:var(--alerta-bg); color:var(--alerta);}
+
+  .campos-dinamicos-editor .fila-campo{
+    display:flex; gap:8px; align-items:center; margin-bottom:8px; font-family:Arial,sans-serif; font-size:13px;
+  }
+  .campos-dinamicos-editor .fila-campo input[type=text]{flex:2; padding:6px 8px; border:1px solid var(--papel-borde); border-radius:4px;}
+  .campos-dinamicos-editor .fila-campo select{flex:1; padding:6px 8px; border:1px solid var(--papel-borde); border-radius:4px;}
+
+  .aviso{
+    font-family:Arial,sans-serif; font-size:13px; padding:10px 14px; border-radius:4px; margin-bottom:14px;
+  }
+  .aviso.info{background:var(--azul-100); color:var(--azul-700);}
+  .aviso.offline{background:var(--pendiente-bg); color:var(--pendiente);}
+
+  .volver{font-family:Arial,sans-serif; font-size:12px; color:var(--azul-700); cursor:pointer; margin-bottom:12px; display:inline-block;}
+
+  .grupo-titulo{font-family:Arial,sans-serif; font-size:12px; text-transform:uppercase; letter-spacing:.03em; color:var(--tinta-suave); margin:18px 0 8px; border-top:1px solid var(--papel-borde); padding-top:14px;}
+  .vacio{font-family:Arial,sans-serif; font-size:13px; color:var(--tinta-suave); padding:14px 0;}
+</style>
+</head>
+<body>
+
+<div id="splash">
+  <p>Sistema de Fichas Sociales</p>
+</div>
+
+<!-- ================= LOGIN ================= -->
+<div id="vista-login">
+  <div class="caja-login" id="caja-login">
+    <h1>Sistema de Fichas Sociales</h1>
+    <p class="sub">Ingresá con tu cuenta de la oficina</p>
+    <div class="campo">
+      <label>Correo electrónico</label>
+      <input type="email" id="login-email" autocomplete="username">
+    </div>
+    <div class="campo">
+      <label>Contraseña</label>
+      <input type="password" id="login-pass" autocomplete="current-password">
+    </div>
+    <button class="primario" onclick="iniciarSesion()">Ingresar</button>
+    <div class="error-login oculto" id="login-error"></div>
+    <span class="link-alternar" onclick="mostrarRegistro()">¿Sos nuevo/a en tu oficina? Crear cuenta</span>
+  </div>
+
+  <div class="caja-login oculto" id="caja-registro">
+    <h1>Crear cuenta</h1>
+    <p class="sub">Usá el código de invitación que te compartió el administrador de tu oficina</p>
+    <div class="campo">
+      <label>Nombre y apellido</label>
+      <input type="text" id="reg-nombre">
+    </div>
+    <div class="campo">
+      <label>Correo electrónico</label>
+      <input type="email" id="reg-email" autocomplete="username">
+    </div>
+    <div class="campo">
+      <label>Contraseña</label>
+      <input type="password" id="reg-pass" autocomplete="new-password">
+    </div>
+    <div class="campo">
+      <label>Código de la oficina</label>
+      <input type="text" id="reg-codigo" placeholder="Ej: DISCAPACIDAD2026">
+    </div>
+    <button class="primario" onclick="registrarCuenta()">Crear cuenta</button>
+    <div class="error-login oculto" id="registro-error"></div>
+    <span class="link-alternar" onclick="mostrarLogin()">Ya tengo cuenta, iniciar sesión</span>
+  </div>
+
+  <div class="caja-login oculto" id="caja-pendiente">
+    <h1>Cuenta pendiente</h1>
+    <p class="sub">Tu cuenta fue creada correctamente. El administrador de tu oficina todavía tiene que aprobarla antes de que puedas ingresar. Volvé a intentar más tarde.</p>
+    <button class="secundario" style="width:100%;" onclick="mostrarLogin()">Volver al inicio de sesión</button>
+  </div>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="vista-app">
+  <header class="barra">
+    <div class="marca">Sistema de Fichas Sociales<span id="nombre-organizacion"></span></div>
+    <div class="usuario">
+      <span id="nombre-usuario"></span>
+      <button onclick="cerrarSesion()">Salir</button>
+    </div>
+  </header>
+  <nav class="tabs">
+    <button data-tab="beneficiarios" onclick="mostrarTab('beneficiarios')" class="activo">Beneficiarios</button>
+    <button data-tab="tramites" onclick="mostrarTab('tramites')">Trámites</button>
+    <button data-tab="formularios" id="tab-btn-formularios" onclick="mostrarTab('formularios')">Formularios</button>
+    <button data-tab="usuarios" id="tab-btn-usuarios" onclick="mostrarTab('usuarios')">Usuarios</button>
+    <button data-tab="organizaciones" id="tab-btn-organizaciones" onclick="mostrarTab('organizaciones')">Organizaciones</button>
+  </nav>
+  <main>
+    <div id="aviso-offline" class="aviso offline oculto">
+      Sin conexión: los cambios se guardan localmente y se sincronizan al volver a estar online.
+      <span id="contador-pendientes"></span>
+    </div>
+
+    <!-- ---- TAB BENEFICIARIOS ---- -->
+    <div id="tab-beneficiarios">
+      <div class="panel">
+        <div class="panel-cabecera">
+          <h2>Beneficiarios</h2>
+          <button class="secundario" onclick="abrirNuevoBeneficiario()">+ Nuevo beneficiario</button>
+        </div>
+        <div class="fila-form">
+          <div class="campo">
+            <label>Buscar por apellido y nombre o DNI</label>
+            <input type="text" id="buscar-beneficiario" oninput="filtrarBeneficiarios()" placeholder="Ej: Pérez o 30123456">
+          </div>
+        </div>
+        <table class="registro">
+          <thead><tr><th>Apellido y nombre</th><th>DNI</th><th>Dirección</th><th>Hijos</th></tr></thead>
+          <tbody id="tabla-beneficiarios"></tbody>
+        </table>
+        <div id="beneficiarios-vacio" class="vacio oculto">No hay beneficiarios cargados todavía.</div>
+      </div>
+    </div>
+
+    <!-- ---- TAB TRAMITES ---- -->
+    <div id="tab-tramites" class="oculto">
+      <div class="panel">
+        <div class="panel-cabecera"><h2>Trámites</h2></div>
+        <table class="registro">
+          <thead><tr><th>Beneficiario</th><th>Tipo</th><th>Fecha</th><th>Estado</th></tr></thead>
+          <tbody id="tabla-tramites"></tbody>
+        </table>
+        <div id="tramites-vacio" class="vacio oculto">No hay trámites cargados todavía.</div>
+      </div>
+    </div>
+
+    <!-- ---- TAB FORMULARIOS (admin) ---- -->
+    <div id="tab-formularios" class="oculto">
+      <div class="panel">
+        <div class="panel-cabecera">
+          <h2>Formularios</h2>
+          <button class="secundario" onclick="abrirNuevoFormulario()">+ Nuevo formulario</button>
+        </div>
+        <table class="registro">
+          <thead><tr><th>Nombre</th><th>Aplica a</th><th>Campos</th></tr></thead>
+          <tbody id="tabla-formularios"></tbody>
+        </table>
+        <div id="formularios-vacio" class="vacio oculto">Todavía no definiste ningún formulario.</div>
+      </div>
+    </div>
+
+    <!-- ---- TAB ORGANIZACIONES (superadmin) ---- -->
+    <div id="tab-organizaciones" class="oculto">
+      <div class="panel">
+        <div class="panel-cabecera">
+          <h2>Organizaciones</h2>
+          <button class="secundario" onclick="abrirNuevaOrganizacion()">+ Nueva organización</button>
+        </div>
+        <table class="registro">
+          <thead><tr><th>Nombre interno</th><th>Nombre visible en la app</th><th>Código de invitación</th></tr></thead>
+          <tbody id="tabla-organizaciones"></tbody>
+        </table>
+      </div>
+      <div class="panel oculto" id="panel-nueva-organizacion">
+        <div class="panel-cabecera"><h2>Nueva organización</h2></div>
+        <div class="fila-form">
+          <div class="campo"><label>Nombre interno (ej: Municipio de X)</label><input type="text" id="no-nombre"></div>
+          <div class="campo"><label>Nombre visible en la app (opcional)</label><input type="text" id="no-nombre-app" placeholder="Ej: Sistema de Fichas — Municipio de X"></div>
+        </div>
+        <div class="campo"><label>Código de invitación</label><input type="text" id="no-codigo" placeholder="Ej: MUNICIPIOX2026"></div>
+        <button class="primario" style="width:auto; padding:10px 24px;" onclick="guardarNuevaOrganizacion()">Guardar</button>
+      </div>
+    </div>
+
+    <!-- ---- TAB USUARIOS (admin) ---- -->
+    <div id="tab-usuarios" class="oculto">
+      <div class="panel">
+        <div class="panel-cabecera"><h2>Cuentas pendientes de aprobación</h2></div>
+        <table class="registro">
+          <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th></th></tr></thead>
+          <tbody id="tabla-usuarios-pendientes"></tbody>
+        </table>
+        <div id="usuarios-pendientes-vacio" class="vacio oculto">No hay cuentas esperando aprobación.</div>
+      </div>
+      <div class="panel">
+        <div class="panel-cabecera"><h2>Código de invitación de tu oficina</h2></div>
+        <p style="font-family:Arial,sans-serif; font-size:13px; color:var(--tinta-suave);">
+          Compartí este código con tu equipo para que puedan crear su cuenta desde la pantalla de ingreso.
+        </p>
+        <div id="codigo-invitacion" style="font-family:Arial,sans-serif; font-size:16px; font-weight:bold; color:var(--azul-900); letter-spacing:.05em;"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-cabecera"><h2>Equipo activo</h2></div>
+        <table class="registro">
+          <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th></tr></thead>
+          <tbody id="tabla-usuarios-activos"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ---- DETALLE / FORM BENEFICIARIO ---- -->
+    <div id="vista-detalle-beneficiario" class="oculto">
+      <span class="volver" onclick="volverALista('beneficiarios')">&larr; Volver a beneficiarios</span>
+      <div class="panel" id="panel-datos-beneficiario"></div>
+      <div class="panel" id="panel-hijos"></div>
+      <div class="panel" id="panel-tramites-beneficiario"></div>
+    </div>
+
+    <!-- ---- FORM NUEVO BENEFICIARIO ---- -->
+    <div id="vista-nuevo-beneficiario" class="oculto">
+      <span class="volver" onclick="volverALista('beneficiarios')">&larr; Cancelar</span>
+      <div class="panel">
+        <div class="panel-cabecera"><h2>Nuevo beneficiario</h2></div>
+        <div class="fila-form">
+          <div class="campo"><label>Apellido y nombre</label><input type="text" id="nb-apellido-nombre"></div>
+          <div class="campo"><label>DNI</label><input type="text" id="nb-dni"></div>
+        </div>
+        <div class="fila-form">
+          <div class="campo"><label>Dirección</label><input type="text" id="nb-direccion"></div>
+          <div class="campo"><label>Teléfono</label><input type="text" id="nb-telefono"></div>
+        </div>
+        <div class="campo">
+          <label>Tipo de ficha (opcional — agrega campos según el trámite)</label>
+          <select id="nb-formulario" onchange="renderCamposDinamicos('nb-campos-extra', this.value)"></select>
+        </div>
+        <div id="nb-campos-extra"></div>
+        <button class="primario" style="width:auto; padding:10px 24px;" onclick="guardarNuevoBeneficiario()">Guardar</button>
+      </div>
+    </div>
+
+    <!-- ---- FORM NUEVO FORMULARIO (admin) ---- -->
+    <div id="vista-nuevo-formulario" class="oculto">
+      <span class="volver" onclick="volverALista('formularios')">&larr; Cancelar</span>
+      <div class="panel">
+        <div class="panel-cabecera"><h2>Nuevo formulario</h2></div>
+        <div class="fila-form">
+          <div class="campo"><label>Nombre</label><input type="text" id="nf-nombre" placeholder="Ej: Renovación pase de discapacidad"></div>
+          <div class="campo">
+            <label>Aplica a</label>
+            <select id="nf-aplica-a">
+              <option value="beneficiario">Beneficiario</option>
+              <option value="hijo">Hijo / dependiente</option>
+              <option value="tramite">Trámite</option>
+            </select>
+          </div>
+        </div>
+        <div class="grupo-titulo">Campos del formulario</div>
+        <div class="campos-dinamicos-editor" id="nf-lista-campos"></div>
+        <button class="secundario chico" onclick="agregarFilaCampo()">+ Agregar campo</button>
+        <div style="margin-top:18px;">
+          <button class="primario" style="width:auto; padding:10px 24px;" onclick="guardarNuevoFormulario()">Guardar formulario</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+// ============================================================
+// CONFIGURACIÓN — completar con los datos de tu proyecto Supabase
+// ============================================================
+const SUPABASE_URL = "https://TU-PROYECTO.supabase.co";
+const SUPABASE_ANON_KEY = "TU-ANON-KEY";
+
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+window.supabase = supabase;
+
+// ---------------- Estado global ----------------
+let perfil = null;              // { id, organizacion_id, nombre_completo, rol }
+let organizacion = null;
+let beneficiarios = [];
+let formularios = [];
+let tramites = [];
+let beneficiarioActualId = null;
+let filasCamposFormulario = [];
+let colaOffline = JSON.parse(localStorage.getItem("cola_offline") || "[]");
+
+// ---------------- Utilidades offline ----------------
+function guardarCola(){ localStorage.setItem("cola_offline", JSON.stringify(colaOffline)); }
+function encolarOperacion(op){
+  colaOffline.push(op);
+  guardarCola();
+  actualizarAvisoOffline();
+}
+function actualizarAvisoOffline(){
+  const aviso = document.getElementById("aviso-offline");
+  const contador = document.getElementById("contador-pendientes");
+  if (colaOffline.length > 0){
+    aviso.classList.remove("oculto");
+    contador.textContent = `(${colaOffline.length} cambio(s) sin sincronizar)`;
+  } else {
+    aviso.classList.add("oculto");
+  }
+}
+async function sincronizarCola(){
+  if (colaOffline.length === 0) return;
+  const pendientes = [...colaOffline];
+  colaOffline = [];
+  for (const op of pendientes){
+    try{
+      await supabase.from(op.tabla).insert(op.datos);
+    }catch(e){
+      colaOffline.push(op); // si falla, se vuelve a encolar
+    }
+  }
+  guardarCola();
+  actualizarAvisoOffline();
+  await cargarTodo();
+}
+window.addEventListener("online", sincronizarCola);
+
+// Inserta con fallback a cola offline si no hay red
+async function insertarConFallback(tabla, datos){
+  if (!navigator.onLine){
+    encolarOperacion({tabla, datos});
+    return {data:[datos], error:null, offline:true};
+  }
+  const resultado = await supabase.from(tabla).insert(datos).select();
+  if (resultado.error){
+    encolarOperacion({tabla, datos});
+    return {...resultado, offline:true};
+  }
+  return resultado;
+}
+
+// ---------------- Login ----------------
+window.iniciarSesion = async function(){
+  const email = document.getElementById("login-email").value.trim();
+  const pass = document.getElementById("login-pass").value;
+  const errorEl = document.getElementById("login-error");
+  errorEl.classList.add("oculto");
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+  if (error){
+    errorEl.textContent = "No pudimos iniciar sesión. Revisá el correo y la contraseña.";
+    errorEl.classList.remove("oculto");
+    return;
+  }
+  await cargarPerfil();
+};
+
+window.cerrarSesion = async function(){
+  await supabase.auth.signOut();
+  perfil = null;
+  document.getElementById("vista-app").style.display = "none";
+  document.getElementById("vista-login").style.display = "flex";
+  mostrarLogin();
+};
+
+window.mostrarRegistro = function(){
+  document.getElementById("caja-login").classList.add("oculto");
+  document.getElementById("caja-pendiente").classList.add("oculto");
+  document.getElementById("caja-registro").classList.remove("oculto");
+};
+window.mostrarLogin = function(){
+  document.getElementById("caja-registro").classList.add("oculto");
+  document.getElementById("caja-pendiente").classList.add("oculto");
+  document.getElementById("caja-login").classList.remove("oculto");
+};
+window.mostrarPendiente = function(){
+  document.getElementById("caja-login").classList.add("oculto");
+  document.getElementById("caja-registro").classList.add("oculto");
+  document.getElementById("caja-pendiente").classList.remove("oculto");
+};
+
+window.registrarCuenta = async function(){
+  const nombre_completo = document.getElementById("reg-nombre").value.trim();
+  const email = document.getElementById("reg-email").value.trim();
+  const password = document.getElementById("reg-pass").value;
+  const codigo = document.getElementById("reg-codigo").value.trim();
+  const errorEl = document.getElementById("registro-error");
+  errorEl.classList.add("oculto");
+
+  if (!nombre_completo || !email || !password || !codigo){
+    errorEl.textContent = "Completá todos los campos, incluido el código de tu oficina.";
+    errorEl.classList.remove("oculto");
+    return;
+  }
+
+  const { data: orgId, error: errorCodigo } = await supabase.rpc("buscar_organizacion_por_codigo", { codigo });
+  if (errorCodigo || !orgId){
+    errorEl.textContent = "El código de oficina no es válido. Verificalo con tu administrador.";
+    errorEl.classList.remove("oculto");
+    return;
+  }
+
+  const { data: alta, error: errorAlta } = await supabase.auth.signUp({ email, password });
+  if (errorAlta || !alta.user){
+    errorEl.textContent = "No pudimos crear la cuenta: " + (errorAlta ? errorAlta.message : "intentá de nuevo.");
+    errorEl.classList.remove("oculto");
+    return;
+  }
+
+  const { error: errorPerfil } = await supabase.from("perfiles").insert({
+    id: alta.user.id,
+    organizacion_id: orgId,
+    nombre_completo,
+    rol: "operador",
+    aprobado: false,
+  });
+  if (errorPerfil){
+    errorEl.textContent = "La cuenta se creó pero no pudimos vincularla a la oficina. Avisale al administrador.";
+    errorEl.classList.remove("oculto");
+    return;
+  }
+  window.mostrarPendiente();
+};
+
+async function cargarPerfil(){
+  const { data:{ user } } = await supabase.auth.getUser();
+  if (!user) return;
+  const { data, error } = await supabase.from("perfiles").select("*, organizaciones(nombre, nombre_app, codigo_invitacion)").eq("id", user.id).single();
+  if (error || !data){
+    document.getElementById("login-error").textContent = "Tu usuario no tiene un perfil de oficina asignado. Contactá al administrador del sistema.";
+    document.getElementById("login-error").classList.remove("oculto");
+    await supabase.auth.signOut();
+    return;
+  }
+  if (!data.aprobado){
+    window.mostrarPendiente();
+    await supabase.auth.signOut();
+    return;
+  }
+  perfil = data;
+  document.getElementById("vista-login").style.display = "none";
+  document.getElementById("vista-app").style.display = "block";
+  document.getElementById("nombre-usuario").textContent = `${perfil.nombre_completo} · ${perfil.rol}`;
+
+  const esAdmin = perfil.rol === "admin";
+  const esSuperadmin = perfil.rol === "superadmin";
+
+  if (esSuperadmin){
+    document.getElementById("nombre-organizacion").textContent = "Panel de soporte";
+  } else {
+    const nombreVisible = perfil.organizaciones ? (perfil.organizaciones.nombre_app || perfil.organizaciones.nombre) : "";
+    document.getElementById("nombre-organizacion").textContent = nombreVisible;
+  }
+
+  // Pestañas visibles según el rol
+  document.getElementById("tab-btn-formularios").style.display = esAdmin ? "" : "none";
+  document.getElementById("tab-btn-usuarios").style.display = (esAdmin || esSuperadmin) ? "" : "none";
+  document.getElementById("tab-btn-organizaciones").style.display = esSuperadmin ? "" : "none";
+  document.querySelector('nav.tabs button[data-tab="beneficiarios"]').style.display = esSuperadmin ? "none" : "";
+  document.querySelector('nav.tabs button[data-tab="tramites"]').style.display = esSuperadmin ? "none" : "";
+
+  if (esAdmin) document.getElementById("codigo-invitacion").textContent = perfil.organizaciones?.codigo_invitacion || "(sin código configurado)";
+
+  if (esSuperadmin){
+    await cargarOrganizaciones();
+    await cargarUsuarios();
+    window.mostrarTab("organizaciones");
+  } else {
+    await cargarTodo();
+    if (esAdmin) await cargarUsuarios();
+  }
+}
+
+// Restaurar sesión si ya estaba logueado
+function ocultarSplash(){
+  const s = document.getElementById("splash");
+  if (s) s.classList.add("oculto");
+}
+supabase.auth.getSession().then(async ({data}) => {
+  if (data.session) await cargarPerfil();
+  ocultarSplash();
+});
+// Respaldo por si algo tarda de más: nunca dejar el splash trabado
+setTimeout(ocultarSplash, 4000);
+
+// ---------------- Carga de datos ----------------
+async function cargarTodo(){
+  const [b, f, t] = await Promise.all([
+    supabase.from("beneficiarios").select("*, hijos(count)").order("apellido_nombre"),
+    supabase.from("formularios").select("*").order("nombre"),
+    supabase.from("tramites").select("*, beneficiarios(apellido_nombre)").order("fecha", {ascending:false}),
+  ]);
+  beneficiarios = b.data || [];
+  formularios = f.data || [];
+  tramites = t.data || [];
+  renderBeneficiarios();
+  renderFormularios();
+  renderTramites();
+  actualizarAvisoOffline();
+}
+
+// ---------------- Tabs ----------------
+window.mostrarTab = function(tab){
+  ["beneficiarios","tramites","formularios","usuarios","organizaciones"].forEach(t=>{
+    document.getElementById("tab-"+t).classList.toggle("oculto", t!==tab);
+    document.querySelector(`nav.tabs button[data-tab="${t}"]`).classList.toggle("activo", t===tab);
+  });
+  document.getElementById("vista-detalle-beneficiario").classList.add("oculto");
+  document.getElementById("vista-nuevo-beneficiario").classList.add("oculto");
+  document.getElementById("vista-nuevo-formulario").classList.add("oculto");
+};
+
+window.volverALista = function(tab){
+  document.getElementById("vista-detalle-beneficiario").classList.add("oculto");
+  document.getElementById("vista-nuevo-beneficiario").classList.add("oculto");
+  document.getElementById("vista-nuevo-formulario").classList.add("oculto");
+  document.getElementById("tab-"+tab).classList.remove("oculto");
+};
+
+// ---------------- Renderizado de campos dinámicos ----------------
+// schema: [{id,label,tipo,requerido}] — tipo: texto|numero|fecha|si_no|select
+function renderCamposDinamicos(contenedorId, formularioId, valoresPrevios={}){
+  const cont = document.getElementById(contenedorId);
+  cont.innerHTML = "";
+  const form = formularios.find(f => f.id === formularioId);
+  if (!form) return;
+  const campos = form.campos_schema || [];
+  campos.forEach(c => {
+    const div = document.createElement("div");
+    div.className = "campo";
+    div.style.marginBottom = "12px";
+    let input = "";
+    const val = valoresPrevios[c.id] ?? "";
+    if (c.tipo === "si_no"){
+      input = `<select data-campo-id="${c.id}"><option value="">-</option><option value="si" ${val==="si"?"selected":""}>Sí</option><option value="no" ${val==="no"?"selected":""}>No</option></select>`;
+    } else if (c.tipo === "fecha"){
+      input = `<input type="date" data-campo-id="${c.id}" value="${val}">`;
+    } else if (c.tipo === "numero"){
+      input = `<input type="number" data-campo-id="${c.id}" value="${val}">`;
+    } else {
+      input = `<input type="text" data-campo-id="${c.id}" value="${val}">`;
+    }
+    div.innerHTML = `<label>${c.label}${c.requerido?" *":""}</label>${input}`;
+    cont.appendChild(div);
+  });
+}
+function leerCamposDinamicos(contenedorId){
+  const cont = document.getElementById(contenedorId);
+  const datos = {};
+  cont.querySelectorAll("[data-campo-id]").forEach(el => { datos[el.dataset.campoId] = el.value; });
+  return datos;
+}
+
+// ---------------- Beneficiarios ----------------
+function renderBeneficiarios(lista){
+  lista = lista || beneficiarios;
+  const tbody = document.getElementById("tabla-beneficiarios");
+  tbody.innerHTML = "";
+  document.getElementById("beneficiarios-vacio").classList.toggle("oculto", lista.length>0);
+  lista.forEach(b=>{
+    const tr = document.createElement("tr");
+    const cantHijos = b.hijos && b.hijos[0] ? b.hijos[0].count : 0;
+    tr.innerHTML = `<td>${b.apellido_nombre}</td><td>${b.dni}</td><td>${b.direccion||""}</td><td>${cantHijos}</td>`;
+    tr.onclick = () => abrirDetalleBeneficiario(b.id);
+    tbody.appendChild(tr);
+  });
+}
+window.filtrarBeneficiarios = function(){
+  const q = document.getElementById("buscar-beneficiario").value.toLowerCase().trim();
+  if (!q){ renderBeneficiarios(); return; }
+  renderBeneficiarios(beneficiarios.filter(b =>
+    b.apellido_nombre.toLowerCase().includes(q) || b.dni.includes(q)
+  ));
+};
+
+window.abrirNuevoBeneficiario = function(){
+  document.getElementById("tab-beneficiarios").classList.add("oculto");
+  document.getElementById("vista-nuevo-beneficiario").classList.remove("oculto");
+  document.getElementById("nb-apellido-nombre").value = "";
+  document.getElementById("nb-dni").value = "";
+  document.getElementById("nb-direccion").value = "";
+  document.getElementById("nb-telefono").value = "";
+  const sel = document.getElementById("nb-formulario");
+  sel.innerHTML = `<option value="">Ninguno / datos básicos solamente</option>` +
+    formularios.filter(f=>f.aplica_a==="beneficiario").map(f=>`<option value="${f.id}">${f.nombre}</option>`).join("");
+  document.getElementById("nb-campos-extra").innerHTML = "";
+};
+
+window.guardarNuevoBeneficiario = async function(){
+  const apellido_nombre = document.getElementById("nb-apellido-nombre").value.trim();
+  const dni = document.getElementById("nb-dni").value.trim();
+  if (!apellido_nombre || !dni){ alert("Completá al menos apellido y nombre, y DNI."); return; }
+  const datos = {
+    organizacion_id: perfil.organizacion_id,
+    apellido_nombre,
+    dni,
+    direccion: document.getElementById("nb-direccion").value.trim(),
+    telefono: document.getElementById("nb-telefono").value.trim(),
+    datos_extra: leerCamposDinamicos("nb-campos-extra"),
+  };
+  await insertarConFallback("beneficiarios", datos);
+  await cargarTodo();
+  window.volverALista("beneficiarios");
+};
+
+window.abrirDetalleBeneficiario = async function(id){
+  beneficiarioActualId = id;
+  const b = beneficiarios.find(x=>x.id===id);
+  if (!b) return;
+  document.getElementById("tab-beneficiarios").classList.add("oculto");
+  document.getElementById("vista-detalle-beneficiario").classList.remove("oculto");
+
+  document.getElementById("panel-datos-beneficiario").innerHTML = `
+    <div class="panel-cabecera"><h2>${b.apellido_nombre}</h2></div>
+    <div class="fila-form">
+      <div><strong>DNI:</strong> ${b.dni}</div>
+      <div><strong>Dirección:</strong> ${b.direccion||"-"}</div>
+      <div><strong>Teléfono:</strong> ${b.telefono||"-"}</div>
+    </div>
+    ${Object.keys(b.datos_extra||{}).length ? `<div class="grupo-titulo">Datos adicionales</div>` +
+      Object.entries(b.datos_extra).map(([k,v])=>`<div>${k}: ${v}</div>`).join("") : ""}
+  `;
+
+  const { data: hijos } = await supabase.from("hijos").select("*").eq("beneficiario_id", id);
+  document.getElementById("panel-hijos").innerHTML = `
+    <div class="panel-cabecera"><h2>Hijos / dependientes</h2>
+      <button class="secundario chico" onclick="agregarHijoRapido('${id}')">+ Agregar hijo</button>
+    </div>
+    ${(hijos&&hijos.length) ? `<table class="registro"><thead><tr><th>Nombre</th><th>Edad</th></tr></thead><tbody>` +
+      hijos.map(h=>`<tr><td>${h.nombre}</td><td>${h.edad||"-"}</td></tr>`).join("") + `</tbody></table>`
+      : `<div class="vacio">No tiene hijos cargados.</div>`}
+  `;
+
+  const misTramites = tramites.filter(t=>t.beneficiario_id===id);
+  document.getElementById("panel-tramites-beneficiario").innerHTML = `
+    <div class="panel-cabecera"><h2>Trámites</h2>
+      <button class="secundario chico" onclick="agregarTramiteRapido('${id}')">+ Nuevo trámite</button>
+    </div>
+    ${misTramites.length ? `<table class="registro"><thead><tr><th>Tipo</th><th>Fecha</th><th>Estado</th></tr></thead><tbody>` +
+      misTramites.map(t=>`<tr><td>${t.tipo}</td><td>${t.fecha}</td><td><span class="pill ${t.estado}">${t.estado}</span></td></tr>`).join("") + `</tbody></table>`
+      : `<div class="vacio">No tiene trámites cargados.</div>`}
+  `;
+};
+
+window.agregarHijoRapido = async function(beneficiarioId){
+  const nombre = prompt("Nombre del hijo/a:");
+  if (!nombre) return;
+  const edad = prompt("Edad:");
+  await insertarConFallback("hijos", { beneficiario_id: beneficiarioId, nombre, edad: edad?parseInt(edad):null, datos_extra:{} });
+  await cargarTodo();
+  window.abrirDetalleBeneficiario(beneficiarioId);
+};
+
+window.agregarTramiteRapido = async function(beneficiarioId){
+  const tipo = prompt("Tipo de trámite (ej: Turno inicial junta, Renovación pase):");
+  if (!tipo) return;
+  await insertarConFallback("tramites", {
+    organizacion_id: perfil.organizacion_id, beneficiario_id: beneficiarioId,
+    tipo, estado: "pendiente", fecha: new Date().toISOString().slice(0,10), datos_extra:{}
+  });
+  await cargarTodo();
+  window.abrirDetalleBeneficiario(beneficiarioId);
+};
+
+// ---------------- Trámites (listado general) ----------------
+function renderTramites(){
+  const tbody = document.getElementById("tabla-tramites");
+  tbody.innerHTML = "";
+  document.getElementById("tramites-vacio").classList.toggle("oculto", tramites.length>0);
+  tramites.forEach(t=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${t.beneficiarios ? t.beneficiarios.apellido_nombre : ""}</td><td>${t.tipo}</td><td>${t.fecha}</td><td><span class="pill ${t.estado}">${t.estado}</span></td>`;
+    tr.onclick = () => window.abrirDetalleBeneficiario(t.beneficiario_id);
+    tbody.appendChild(tr);
+  });
+}
+
+// ---------------- Usuarios (admin / superadmin) ----------------
+async function cargarUsuarios(){
+  const esSuperadmin = perfil.rol === "superadmin";
+  const consulta = esSuperadmin
+    ? supabase.from("perfiles").select("id, nombre_completo, rol, aprobado, organizaciones(nombre)").order("nombre_completo")
+    : supabase.from("perfiles").select("id, nombre_completo, rol, aprobado").order("nombre_completo");
+  const { data, error } = await consulta;
+  if (error || !data) return;
+  const pendientes = data.filter(u=>!u.aprobado);
+  const activos = data.filter(u=>u.aprobado);
+
+  const tbodyP = document.getElementById("tabla-usuarios-pendientes");
+  tbodyP.innerHTML = "";
+  document.getElementById("usuarios-pendientes-vacio").classList.toggle("oculto", pendientes.length>0);
+  pendientes.forEach(u=>{
+    const tr = document.createElement("tr");
+    const orgTxt = esSuperadmin ? `${u.organizaciones ? u.organizaciones.nombre : "-"} · ` : "";
+    tr.innerHTML = `<td>${orgTxt}${u.nombre_completo}</td><td>-</td><td>${u.rol}</td>
+      <td><button class="secundario chico" onclick="aprobarUsuario('${u.id}')">Aprobar</button></td>`;
+    tbodyP.appendChild(tr);
+  });
+
+  const tbodyA = document.getElementById("tabla-usuarios-activos");
+  tbodyA.innerHTML = "";
+  activos.forEach(u=>{
+    const tr = document.createElement("tr");
+    const orgTxt = esSuperadmin ? `${u.organizaciones ? u.organizaciones.nombre : "-"} · ` : "";
+    tr.innerHTML = `<td>${orgTxt}${u.nombre_completo}</td><td>-</td><td>${u.rol}</td>`;
+    tbodyA.appendChild(tr);
+  });
+}
+
+window.aprobarUsuario = async function(id){
+  await supabase.from("perfiles").update({ aprobado: true }).eq("id", id);
+  await cargarUsuarios();
+};
+
+// ---------------- Organizaciones (superadmin) ----------------
+async function cargarOrganizaciones(){
+  const { data, error } = await supabase.from("organizaciones").select("*").order("nombre");
+  if (error || !data) return;
+  const tbody = document.getElementById("tabla-organizaciones");
+  tbody.innerHTML = "";
+  data.forEach(o=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${o.nombre}</td><td>${o.nombre_app||"-"}</td><td>${o.codigo_invitacion||"-"}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+window.abrirNuevaOrganizacion = function(){
+  document.getElementById("panel-nueva-organizacion").classList.remove("oculto");
+  document.getElementById("no-nombre").value = "";
+  document.getElementById("no-nombre-app").value = "";
+  document.getElementById("no-codigo").value = "";
+};
+
+window.guardarNuevaOrganizacion = async function(){
+  const nombre = document.getElementById("no-nombre").value.trim();
+  const nombre_app = document.getElementById("no-nombre-app").value.trim();
+  const codigo_invitacion = document.getElementById("no-codigo").value.trim();
+  if (!nombre || !codigo_invitacion){ alert("Completá al menos el nombre y el código de invitación."); return; }
+  const { error } = await supabase.from("organizaciones").insert({
+    nombre, nombre_app: nombre_app || null, codigo_invitacion, activa: true
+  });
+  if (error){ alert("No se pudo crear: el código de invitación puede estar repetido."); return; }
+  document.getElementById("panel-nueva-organizacion").classList.add("oculto");
+  await cargarOrganizaciones();
+};
+
+// ---------------- Formularios (admin) ----------------
+function renderFormularios(){
+  const tbody = document.getElementById("tabla-formularios");
+  tbody.innerHTML = "";
+  document.getElementById("formularios-vacio").classList.toggle("oculto", formularios.length>0);
+  formularios.forEach(f=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${f.nombre}</td><td>${f.aplica_a}</td><td>${(f.campos_schema||[]).length} campo(s)</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+window.abrirNuevoFormulario = function(){
+  document.getElementById("tab-formularios").classList.add("oculto");
+  document.getElementById("vista-nuevo-formulario").classList.remove("oculto");
+  document.getElementById("nf-nombre").value = "";
+  document.getElementById("nf-aplica-a").value = "beneficiario";
+  filasCamposFormulario = [];
+  document.getElementById("nf-lista-campos").innerHTML = "";
+  agregarFilaCampo();
+};
+
+window.agregarFilaCampo = function(){
+  const id = "campo_" + Date.now() + "_" + Math.floor(Math.random()*1000);
+  filasCamposFormulario.push(id);
+  const cont = document.getElementById("nf-lista-campos");
+  const div = document.createElement("div");
+  div.className = "fila-campo";
+  div.id = id;
+  div.innerHTML = `
+    <input type="text" placeholder="Nombre del campo (ej: Escuela)" data-parte="label">
+    <select data-parte="tipo">
+      <option value="texto">Texto</option>
+      <option value="numero">Número</option>
+      <option value="fecha">Fecha</option>
+      <option value="si_no">Sí / No</option>
+    </select>
+    <label style="font-size:12px;"><input type="checkbox" data-parte="requerido"> Obligatorio</label>
+    <button class="secundario chico peligro" onclick="document.getElementById('${id}').remove()">Quitar</button>
+  `;
+  cont.appendChild(div);
+};
+
+window.guardarNuevoFormulario = async function(){
+  const nombre = document.getElementById("nf-nombre").value.trim();
+  const aplica_a = document.getElementById("nf-aplica-a").value;
+  if (!nombre){ alert("Ponele un nombre al formulario."); return; }
+  const campos = [];
+  document.querySelectorAll("#nf-lista-campos .fila-campo").forEach(fila=>{
+    const label = fila.querySelector('[data-parte="label"]').value.trim();
+    if (!label) return;
+    const tipo = fila.querySelector('[data-parte="tipo"]').value;
+    const requerido = fila.querySelector('[data-parte="requerido"]').checked;
+    const id = "c_" + label.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"");
+    campos.push({ id, label, tipo, requerido });
+  });
+  await insertarConFallback("formularios", {
+    organizacion_id: perfil.organizacion_id, nombre, aplica_a, campos_schema: campos, activo: true
+  });
+  await cargarTodo();
+  window.volverALista("formularios");
+};
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
